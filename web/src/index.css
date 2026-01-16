@@ -1,0 +1,274 @@
+@import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap');
+
+:root {
+  --primary: #007AFF;
+  --bg-white: #FFFFFF;
+  --text-black: #000000;
+  --text-gray: #666666;
+  --border-light: #EEEEEE;
+  --card-bg: #F5F5F7;
+
+  font-family: 'Inter', -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+  background-color: var(--bg-white);
+  color: var(--text-black);
+}
+
+html,
+body {
+  margin: 0;
+  padding: 0;
+  height: 100%;
+  width: 100%;
+  overflow-x: hidden;
+  -webkit-font-smoothing: antialiased;
+}
+
+/* Base Utilities */
+.flex {
+  display: flex;
+}
+
+.flex-col {
+  flex-direction: column;
+}
+
+.items-center {
+  align-items: center;
+}
+
+.justify-center {
+  justify-content: center;
+}
+
+.justify-between {
+  justify-content: space-between;
+}
+
+.gap-2 {
+  gap: 8px;
+}
+
+.gap-3 {
+  gap: 12px;
+}
+
+.gap-4 {
+  gap: 16px;
+}
+
+.gap-6 {
+  gap: 24px;
+}
+
+.gap-8 {
+  gap: 32px;
+}
+
+.gap-10 {
+  gap: 40px;
+}
+
+.w-full {
+  width: 100%;
+}
+
+.h-full {
+  height: 100%;
+}
+
+.min-h-screen {
+  min-height: 100vh;
+}
+
+.flex-1 {
+  flex: 1;
+}
+
+.relative {
+  position: relative;
+}
+
+.absolute {
+  position: absolute;
+}
+
+.overflow-hidden {
+  overflow: hidden;
+}
+
+/* Spacing */
+.p-6 {
+  padding: 24px;
+}
+
+.p-10 {
+  padding: 40px;
+}
+
+.mt-2 {
+  margin-top: 8px;
+}
+
+.mt-4 {
+  margin-top: 16px;
+}
+
+.mt-6 {
+  margin-top: 24px;
+}
+
+.mb-2 {
+  margin-top: 8px;
+}
+
+.mb-6 {
+  margin-bottom: 24px;
+}
+
+.mb-10 {
+  margin-bottom: 40px;
+}
+
+@media (min-width: 768px) {
+  .md\:p-10 {
+    padding: 40px;
+  }
+
+  .md\:flex-row {
+    flex-direction: row;
+  }
+
+  .md\:w-auto {
+    width: auto;
+  }
+}
+
+/* Typography - Matching Mobile */
+.text-5xl {
+  font-size: 48px;
+  line-height: 1.1;
+  letter-spacing: -0.02em;
+}
+
+.text-3xl {
+  font-size: 32px;
+  letter-spacing: -0.02em;
+}
+
+.text-xl {
+  font-size: 20px;
+  line-height: 1.4;
+}
+
+.text-lg {
+  font-size: 18px;
+}
+
+.font-bold {
+  font-weight: 700;
+}
+
+.font-semibold {
+  font-weight: 600;
+}
+
+.font-medium {
+  font-weight: 500;
+}
+
+.font-extrabold {
+  font-weight: 800;
+}
+
+.text-gray-500 {
+  color: var(--text-gray);
+}
+
+/* Buttons & components - Matching Mobile */
+button {
+  cursor: pointer;
+  border: none;
+  background: none;
+  font-family: inherit;
+  transition: transform 0.1s ease, background-color 0.2s ease;
+}
+
+button:active {
+  transform: scale(0.98);
+}
+
+.primary-button {
+  background-color: #000000;
+  color: #FFFFFF;
+  padding: 18px 32px;
+  border-radius: 14px;
+  font-weight: 700;
+  font-size: 16px;
+  width: 100%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.primary-button:hover {
+  background-color: #1a1a1a;
+}
+
+.secondary-button {
+  border: 1px solid var(--border-light);
+  color: var(--text-black);
+  padding: 18px 32px;
+  border-radius: 14px;
+  font-weight: 600;
+  font-size: 16px;
+  width: 100%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.secondary-button:hover {
+  background-color: #F9F9F9;
+}
+
+/* Shadows matching mobile elevation */
+.shadow-sm {
+  box-shadow: 0 4px 6px rgba(0, 0, 0, 0.05);
+}
+
+.shadow-card {
+  box-shadow: 0 10px 20px rgba(0, 0, 0, 0.15);
+}
+
+.shadow-lg {
+  box-shadow: 0 20px 40px rgba(0, 0, 0, 0.1);
+}
+
+.text-gray-400 {
+  color: #9CA3AF;
+}
+
+/* Animations */
+.animate-spin {
+  animation: spin 1s linear infinite;
+}
+
+@keyframes spin {
+  from {
+    transform: rotate(0deg);
+  }
+
+  to {
+    transform: rotate(360deg);
+  }
+}
+
+/* Scrollbar hiding */
+.no-scrollbar::-webkit-scrollbar {
+  display: none;
+}
+
+.no-scrollbar {
+  -ms-overflow-style: none;
+  scrollbar-width: none;
+}

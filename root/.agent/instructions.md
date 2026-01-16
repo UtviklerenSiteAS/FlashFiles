@@ -26,7 +26,7 @@ Always follow these design principles when modifying or creating new screens for
 
 ## Layout & Spacing
 - **Maximize White Space**: Do not cluster all elements in the center of the screen.
-- **Vertical Distribution**: On landing/start screens, create interest by placing the **Visual Animation at the top** (using `flex: 1` to push content down) and the **Title/Features/Actions grouped at the bottom** for a cohesive, action-oriented layout.
+- **Vertical Distribution**: On landing/start screens, create interest by placing the **Visual Animation at the top** (using `flex: 1` to push content down) and the **Title/Features/Actions grouped at the bottom**. For the **Authenticated Home Screen**, use a strictly centered minimalist layout on a pure white background.
 - **Alignment**: All content, headers, and text must be **left-aligned** (`alignItems: 'flex-start'`).
 - **Padding**: Use standard horizontal padding of `30px`. Use vertical padding (e.g., `80px` top, `100px` bottom) to create a spacious, breathable feel.
 

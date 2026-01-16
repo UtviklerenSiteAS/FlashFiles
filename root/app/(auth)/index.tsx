@@ -1,5 +1,5 @@
 import React from 'react';
-import { StyleSheet, View, TouchableOpacity, Dimensions, Animated, Easing } from 'react-native';
+import { StyleSheet, View, TouchableOpacity, Dimensions, Animated, Easing, Image } from 'react-native';
 import { LinearGradient } from 'expo-linear-gradient';
 import { useRouter } from 'expo-router';
 import * as Haptics from 'expo-haptics';
@@ -81,8 +81,16 @@ export default function LandingPage() {
                 <View style={styles.bottomGroup}>
                     <View style={styles.topSection}>
                         <View style={styles.logoContainer}>
-                            <IconSymbol name="bolt.fill" size={48} color="#007AFF" />
-                            <ThemedText style={styles.title} type="title">FlashFiles</ThemedText>
+                            <Image
+                                source={require('../../assets/images/logo-only-icon.png')}
+                                style={{ width: 50, height: 50, marginBottom: 16 }}
+                                resizeMode="contain"
+                            />
+                            <Image
+                                source={require('../../assets/images/logo-only-text.png')}
+                                style={{ width: 200, height: 50, marginBottom: 4, marginLeft: -6 }}
+                                resizeMode="contain"
+                            />
                             <ThemedText style={styles.subtitle}>Instant. Secure. Global.</ThemedText>
                         </View>
 
@@ -156,7 +164,7 @@ function SwipeAnimation() {
                         // Touch motion - slightly slower, more deliberate snap
                         Animated.timing(snapAnim, {
                             toValue: 1,
-                            duration: 600,
+                            duration: 1200,
                             easing: Easing.out(Easing.quad),
                             useNativeDriver: true
                         }),
