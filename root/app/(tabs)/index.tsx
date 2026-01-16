@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useRef } from 'react';
-import { StyleSheet, View, TouchableOpacity, Alert, Image, ScrollView, Dimensions, Modal, Animated, PanResponder, Switch, TextInput } from 'react-native';
+import { StyleSheet, View, TouchableOpacity, Alert, Image, ScrollView, Dimensions, Modal, Animated, PanResponder, Switch, TextInput, ActivityIndicator } from 'react-native';
 import { useRouter } from 'expo-router';
 import * as Haptics from 'expo-haptics';
 import * as DocumentPicker from 'expo-document-picker';
@@ -27,6 +27,7 @@ export default function HomeScreen() {
   const router = useRouter();
   const [uploads, setUploads] = useState<UploadItem[]>([]);
   const [showSuccess, setShowSuccess] = useState(false);
+  const [isLoading, setIsLoading] = useState(false);
   const [settingsVisible, setSettingsVisible] = useState(false);
   const [paywallVisible, setPaywallVisible] = useState(false);
   const [daysLeft, setDaysLeft] = useState(14);
@@ -147,54 +148,58 @@ export default function HomeScreen() {
     setUploads(prev => [newItem, ...prev]);
 
     try {
-      // Simulate progress for visual feedback + real upload
-      const progressInterval = setInterval(() => {
-        setUploads(prev => prev.map(item =>
-          item.id === uploadId && item.status === 'uploading' && item.progress < 0.9
-            ? { ...item, progress: item.progress + 0.1 }
-            : item
-        ));
-      }, 300);
-
       // 1. Get user session for token
       const { data: { session } } = await supabase.auth.getSession();
       if (!session) throw new Error('Not authenticated');
 
       console.log(`[Upload] Bruker ID: ${session.user.id}`);
 
-      // 2. Prepare Form Data
-      const formData = new FormData();
-      const fileToUpload = {
+      // 2. Prepare Upload Task for Real Progress
+      const uploadUrl = `${BACKEND_URL}/api/upload`;
+
+      const task = FileSystem.createUploadTask(
+        uploadUrl,
         uri,
-        name: name,
-        type: mimeType || 'application/octet-stream',
-      } as any;
-
-      formData.append('file', fileToUpload);
-
-      console.log(`[Upload] Planlegger opplasting til: ${BACKEND_URL}/api/upload`);
-      console.log(`[Upload] Fil: ${name}, Type: ${mimeType}, Størrelse: ${size}`);
-
-      if (title) formData.append('title', title);
-      if (desc) formData.append('description', desc);
-
-      // 3. Upload to Node.js Backend
-      const response = await fetch(`${BACKEND_URL}/api/upload`, {
-        method: 'POST',
-        headers: {
-          'Authorization': `Bearer ${session.access_token}`,
-          'Accept': 'application/json',
+        {
+          headers: {
+            'Authorization': `Bearer ${session.access_token}`,
+            'Accept': 'application/json',
+          },
+          httpMethod: 'POST',
+          fieldName: 'file',
+          uploadType: FileSystem.FileSystemUploadType.MULTIPART,
+          parameters: {
+            title: title || '',
+            description: desc || ''
+          },
         },
-        body: formData,
-      });
+        (data) => {
+          const progress = data.totalBytesSent / data.totalBytesExpectedToSend;
+          setUploads(prev => prev.map(item =>
+            item.id === uploadId
+              ? { ...item, progress: progress }
+              : item
+          ));
+        }
+      );
 
-      console.log(`[Upload] Respons status: ${response.status}`);
-      clearInterval(progressInterval);
+      console.log(`[Upload] Starter opplasting til: ${uploadUrl}`);
+      const response = await task.uploadAsync();
 
-      if (!response.ok) {
-        const responseData = await response.json();
-        console.error('[Upload] Feilmelding fra server:', responseData);
-        throw new Error(responseData.error || 'Upload failed');
+      console.log(`[Upload] Respons status: ${response ? response.status : 'Ukjent'}`);
+
+      if (!response || response.status !== 201) {
+        let errorMessage = 'Upload failed';
+        try {
+          if (response && response.body) {
+            const responseData = JSON.parse(response.body);
+            errorMessage = responseData.error || errorMessage;
+          }
+        } catch (e) {
+          console.warn('Could not parse error response', e);
+        }
+        console.error('[Upload] Feilmelding fra server:', errorMessage);
+        throw new Error(errorMessage);
       }
 
       console.log(`[Upload] Fullført suksessfullt! 🚀 ID: ${uploadId}`);
@@ -237,6 +242,7 @@ export default function HomeScreen() {
         copyToCacheDirectory: true,
       });
       if (!result.canceled) {
+        setIsLoading(true);
         const asset = result.assets[0];
 
         // Check if the picked document is an image and convert to JPEG
@@ -280,6 +286,8 @@ export default function HomeScreen() {
       }
     } catch (err) {
       console.warn(err);
+    } finally {
+      setIsLoading(false);
     }
   };
 
@@ -295,11 +303,11 @@ export default function HomeScreen() {
         mediaTypes: ['images', 'videos'],
         allowsEditing: false,
         quality: 1,
-        videoExportPreset: ImagePicker.VideoExportPreset.MediumQuality, // Forces iOS to create actual file
-        exif: false, // Reduces processing
+        exif: false,
       });
 
       if (!result.canceled) {
+        setIsLoading(true);
         const asset = result.assets[0];
         const fileName = asset.uri.split('/').pop() || 'upload.jpg';
 
@@ -343,6 +351,8 @@ export default function HomeScreen() {
       } else {
         Alert.alert('Error', err.message || 'Could not access the media.');
       }
+    } finally {
+      setIsLoading(false);
     }
   };
 
@@ -382,7 +392,8 @@ export default function HomeScreen() {
         <View style={styles.uploadMetaRow}>
           <ThemedText style={styles.uploadSize}>
             {item.size ? formatSize(item.size) : 'Unknown size'}
-            {item.status === 'uploading' && ' • Sender...'}
+            {item.status === 'uploading' && ' • Sender... '}
+            {item.status === 'uploading' && <ActivityIndicator size="small" color="#8E8E93" />}
             {item.status === 'completed' && ' • Sendt! 🚀'}
             {item.status === 'error' && ' • Feilet'}
           </ThemedText>
@@ -697,7 +708,19 @@ export default function HomeScreen() {
           </View>
         </SafeAreaView>
       </Modal>
-    </SafeAreaView>
+
+      {/* Global Loading Overlay */}
+      {
+        isLoading && (
+          <View style={styles.loadingOverlay}>
+            <View style={styles.loadingContainer}>
+              <ActivityIndicator size="large" color="#007AFF" />
+              <ThemedText style={styles.loadingText}>Klargjør fil...</ThemedText>
+            </View>
+          </View>
+        )
+      }
+    </SafeAreaView >
   );
 }
 
@@ -802,10 +825,39 @@ const styles = StyleSheet.create({
     marginBottom: 16,
     shadowColor: '#000',
     shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.05,
-    shadowRadius: 4,
+    shadowOpacity: 0.1,
+    shadowRadius: 8,
     elevation: 2,
   },
+  loadingOverlay: {
+    position: 'absolute',
+    top: 0,
+    left: 0,
+    right: 0,
+    bottom: 0,
+    backgroundColor: 'rgba(255, 255, 255, 0.8)',
+    justifyContent: 'center',
+    alignItems: 'center',
+    zIndex: 9999,
+  },
+  loadingContainer: {
+    padding: 24,
+    backgroundColor: '#FFFFFF',
+    borderRadius: 20,
+    alignItems: 'center',
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.15,
+    shadowRadius: 12,
+    elevation: 8,
+  },
+  loadingText: {
+    marginTop: 12,
+    fontSize: 16,
+    fontWeight: '600',
+    color: '#000000',
+  },
+
   modalContainer: {
     flex: 1,
     backgroundColor: '#FFFFFF',
