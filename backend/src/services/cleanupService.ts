@@ -1,13 +1,14 @@
 import fs from 'fs';
 import path from 'path';
 import { supabase } from '../config/supabase';
+import { Logger } from '../utils/logger';
 
 class CleanupService {
     private interval: NodeJS.Timeout | null = null;
     private readonly CLEANUP_INTERVAL = 10 * 60 * 1000; // 10 minutter
 
     start() {
-        console.log('[Cleanup] Starter automatisk oppryddingstjeneste...');
+        Logger.info('[Cleanup] Starter automatisk oppryddingstjeneste...');
 
         // Kjør umiddelbart ved oppstart
         this.runCleanup();
@@ -26,7 +27,7 @@ class CleanupService {
     }
 
     private async runCleanup() {
-        console.log(`[Cleanup] Kjører opprydding: ${new Date().toISOString()}`);
+        Logger.info(`[Cleanup] Kjører opprydding: ${new Date().toISOString()}`);
 
         try {
             const now = new Date().toISOString();
@@ -38,16 +39,16 @@ class CleanupService {
                 .lt('expires_at', now);
 
             if (error) {
-                console.error('[Cleanup] Feil ved henting av utløpte filer fra DB:', error);
+                Logger.error('[Cleanup] Feil ved henting av utløpte filer fra DB:', error);
                 return;
             }
 
             if (!expiredFiles || expiredFiles.length === 0) {
-                console.log('[Cleanup] Ingen utløpte filer funnet.');
+                Logger.info('[Cleanup] Ingen utløpte filer funnet.');
                 return;
             }
 
-            console.log(`[Cleanup] Fant ${expiredFiles.length} utløpte filer.`);
+            Logger.info(`[Cleanup] Fant ${expiredFiles.length} utløpte filer.`);
 
             for (const file of expiredFiles) {
                 try {
@@ -55,9 +56,9 @@ class CleanupService {
                     const filePath = path.resolve(file.path);
                     if (fs.existsSync(filePath)) {
                         fs.unlinkSync(filePath);
-                        console.log(`[Cleanup] Slettet fil fra disk: ${file.filename} (${file.id})`);
+                        Logger.info(`[Cleanup] Slettet fil fra disk: ${file.filename} (${file.id})`);
                     } else {
-                        console.warn(`[Cleanup] Fil fantes ikke på disk, hopper over unlink: ${file.path}`);
+                        Logger.warn(`[Cleanup] Fil fantes ikke på disk, hopper over unlink: ${file.path}`);
                     }
 
                     // 3. Slett raden fra databasen
@@ -67,18 +68,18 @@ class CleanupService {
                         .eq('id', file.id);
 
                     if (deleteError) {
-                        console.error(`[Cleanup] Kunne ikke slette database-rad for fil ${file.id}:`, deleteError);
+                        Logger.error(`[Cleanup] Kunne ikke slette database-rad for fil ${file.id}:`, deleteError);
                     } else {
-                        console.log(`[Cleanup] Slettet metadata for fil ${file.id} fra database.`);
+                        Logger.info(`[Cleanup] Slettet metadata for fil ${file.id} fra database.`);
                     }
 
                 } catch (fileError) {
-                    console.error(`[Cleanup] Feil under sletting av spesifikk fil ${file.id}:`, fileError);
+                    Logger.error(`[Cleanup] Feil under sletting av spesifikk fil ${file.id}:`, fileError);
                 }
             }
 
         } catch (error) {
-            console.error('[Cleanup] Uventet feil i oppryddingsprosessen:', error);
+            Logger.error('[Cleanup] Uventet feil i oppryddingsprosessen:', error);
         }
     }
 }

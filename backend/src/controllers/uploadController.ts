@@ -2,6 +2,7 @@ import { Response } from 'express';
 import { AuthenticatedRequest } from '../middleware/auth';
 import { supabase } from '../config/supabase';
 import { socketService } from '../services/socketService';
+import { Logger } from '../utils/logger';
 
 export const uploadFile = async (req: AuthenticatedRequest, res: Response) => {
     try {
@@ -9,13 +10,13 @@ export const uploadFile = async (req: AuthenticatedRequest, res: Response) => {
         const user = req.user;
 
         if (!file) {
-            console.error('❌ Ingen fil funnet i request');
+            Logger.error('❌ Ingen fil funnet i request');
             return res.status(400).json({ error: 'Ingen fil lastet opp' });
         }
 
-        console.log(`📤 Mottar filopplasting: ${file.originalname} (${(file.size / 1024).toFixed(2)} KB)`);
-        console.log(`📝 Metadata mottatt: Title="${req.body.title}", Desc="${req.body.description}"`);
-        console.log(`📂 Filbane på server: ${file.path}`);
+        Logger.info(`📤 Mottar filopplasting: ${file.originalname} (${(file.size / 1024).toFixed(2)} KB)`);
+        Logger.info(`📝 Metadata mottatt: Title="${req.body.title}", Desc="${req.body.description}"`);
+        Logger.info(`📂 Filbane på server: ${file.path}`);
 
         if (!user) {
             return res.status(401).json({ error: 'Bruker ikke funnet i request' });
@@ -25,7 +26,7 @@ export const uploadFile = async (req: AuthenticatedRequest, res: Response) => {
         const { title, description } = req.body;
 
         if ((title || description) && file.mimetype.startsWith('image/')) {
-            console.log('[Upload] 🎨 Starter bildebehandling med Jimp...');
+            Logger.info('[Upload] 🎨 Starter bildebehandling med Jimp...');
             let JimpClass;
             let jimpLib: any;
             try {
@@ -41,9 +42,9 @@ export const uploadFile = async (req: AuthenticatedRequest, res: Response) => {
                     JimpClass = jimpLib;
                 }
 
-                console.log(`[Jimp] Bibliotek lastet. Read funksjon tilgjengelig: ${typeof JimpClass.read}`);
+                Logger.info(`[Jimp] Bibliotek lastet. Read funksjon tilgjengelig: ${typeof JimpClass.read}`);
             } catch (err) {
-                console.error('[Jimp] Kunne ikke laste biblioteket:', err);
+                Logger.error('[Jimp] Kunne ikke laste biblioteket:', err);
             }
 
             try {
@@ -86,16 +87,16 @@ export const uploadFile = async (req: AuthenticatedRequest, res: Response) => {
                 const ALIGN_RIGHT = JimpClass.HORIZONTAL_ALIGN_RIGHT || jimpLib.HORIZONTAL_ALIGN_RIGHT || (jimpLib.HorizontalAlign ? jimpLib.HorizontalAlign.RIGHT : 4);
                 const ALIGN_BOTTOM = JimpClass.VERTICAL_ALIGN_BOTTOM || jimpLib.VERTICAL_ALIGN_BOTTOM || (jimpLib.VerticalAlign ? jimpLib.VerticalAlign.BOTTOM : 32);
 
-                console.log(`[Jimp] Funksjoner funnet - loadFont: ${typeof loadFont}, measureTextHeight: ${typeof measureTextHeight}`);
-                console.log(`[Jimp] Fonts funnet - 128: ${!!FONT_SANS_128_WHITE}, 64: ${!!FONT_SANS_64_WHITE}, 32: ${!!FONT_SANS_32_WHITE}`);
+                Logger.info(`[Jimp] Funksjoner funnet - loadFont: ${typeof loadFont}, measureTextHeight: ${typeof loadFont && typeof measureTextHeight}`);
+                Logger.info(`[Jimp] Fonts funnet - 128: ${!!FONT_SANS_128_WHITE}, 64: ${!!FONT_SANS_64_WHITE}, 32: ${!!FONT_SANS_32_WHITE}`);
 
                 if (typeof loadFont !== 'function') {
                     throw new Error('loadFont function not found');
                 }
 
-                console.log(`[Jimp] Leser fil fra: ${file.path}`);
+                Logger.info(`[Jimp] Leser fil fra: ${file.path}`);
                 const image = await JimpClass.read(file.path);
-                console.log(`[Jimp] Bilde lest. Dimensjoner: ${image.bitmap.width}x${image.bitmap.height}`);
+                Logger.info(`[Jimp] Bilde lest. Dimensjoner: ${image.bitmap.width}x${image.bitmap.height}`);
 
                 console.log('[Jimp] Laster store fonts (128, 64, 32)...');
                 const fontTitle = await loadFont(FONT_SANS_128_WHITE); // Huge Title
@@ -167,15 +168,15 @@ export const uploadFile = async (req: AuthenticatedRequest, res: Response) => {
                 }
 
                 // Write back to file path
-                console.log('[Jimp] Lagrer endret bilde...');
+                Logger.info('[Jimp] Lagrer endret bilde...');
                 await image.write(file.path);
-                console.log('✅ [Upload] Text overlay lagret suksessfullt.');
+                Logger.info('✅ [Upload] Text overlay lagret suksessfullt.');
 
             } catch (jimpError) {
-                console.error('❌ Jimp processing failed:', jimpError);
+                Logger.error('❌ Jimp processing failed:', jimpError);
             }
         } else {
-            console.log('[Upload] Ingen tekst eller ikke bilde, skipper Jimp.');
+            Logger.info('[Upload] Ingen tekst eller ikke bilde, skipper Jimp.');
         }
 
         // Beregn utløpstidspunkt (nå + 1 time)
@@ -183,7 +184,7 @@ export const uploadFile = async (req: AuthenticatedRequest, res: Response) => {
         expiresAt.setHours(expiresAt.getHours() + 1);
 
         // Lagre metadata i Supabase 'files' tabellen
-        console.log('[Upload] Lagrer metadata i Supabase...');
+        Logger.info('[Upload] Lagrer metadata i Supabase...');
         const { data, error } = await supabase
             .from('files')
             .insert({
@@ -206,7 +207,7 @@ export const uploadFile = async (req: AuthenticatedRequest, res: Response) => {
         console.log(`✅ Metadata lagret i DB, ID: ${data.id}`);
 
         // Send WebSocket-varsel dersom brukeren er tilkoblet (f.eks. på PC)
-        console.log(`[Upload] Varsler bruker via WebSocket: ${user.id}`);
+        Logger.info(`[Upload] Varsler bruker via WebSocket: ${user.id}`);
         const sent = socketService.sendToUser(user.id, 'file_received', {
             fileId: data.id,
             filename: file.originalname,
@@ -214,10 +215,10 @@ export const uploadFile = async (req: AuthenticatedRequest, res: Response) => {
             title: data.title,
             description: data.description
         });
-        console.log(`[Upload] WebSocket varsel sendt: ${sent ? 'Suksess' : 'Bruker ikke online'}`);
+        Logger.info(`[Upload] WebSocket varsel sendt: ${sent ? 'Suksess' : 'Bruker ikke online'}`);
 
         // Returner suksess med fileId
-        console.log('[Upload] Sender suksess-respons til mobil app');
+        Logger.info('[Upload] Sender suksess-respons til mobil app');
         return res.status(201).json({
             message: 'Fil lastet opp og metadata lagret',
             fileId: data.id,
@@ -225,7 +226,7 @@ export const uploadFile = async (req: AuthenticatedRequest, res: Response) => {
         });
 
     } catch (error: any) {
-        console.error('❌ Uventet feil ved opplasting:', error);
+        Logger.error('❌ Uventet feil ved opplasting:', error);
         return res.status(500).json({
             error: 'En uventet feil oppstod under opplasting',
             details: error?.message || 'Ukjent feil'

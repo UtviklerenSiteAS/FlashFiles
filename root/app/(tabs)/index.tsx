@@ -4,6 +4,7 @@ import { useRouter } from 'expo-router';
 import * as Haptics from 'expo-haptics';
 import * as DocumentPicker from 'expo-document-picker';
 import * as ImagePicker from 'expo-image-picker';
+import * as FileSystem from 'expo-file-system/legacy';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import * as ImageManipulator from 'expo-image-manipulator';
 import { ThemedText } from '@/components/themed-text';
@@ -294,22 +295,54 @@ export default function HomeScreen() {
         mediaTypes: ['images', 'videos'],
         allowsEditing: false,
         quality: 1,
+        videoExportPreset: ImagePicker.VideoExportPreset.MediumQuality, // Forces iOS to create actual file
+        exif: false, // Reduces processing
       });
 
       if (!result.canceled) {
         const asset = result.assets[0];
         const fileName = asset.uri.split('/').pop() || 'upload.jpg';
+
+        // Use FileSystem to get actual file size
+        let fileSize = 0;
+        try {
+          const fileInfo = await FileSystem.getInfoAsync(asset.uri);
+          if (fileInfo.exists && fileInfo.size) {
+            fileSize = fileInfo.size;
+          } else {
+            console.warn('[Media] File size not available, estimating...');
+            // Fallback estimate for videos/images
+            if (asset.width && asset.height && asset.duration) {
+              // Video estimate: ~2MB per second at medium quality
+              fileSize = Math.floor((asset.duration / 1000) * 2 * 1024 * 1024);
+            } else if (asset.width && asset.height) {
+              // Image estimate
+              fileSize = asset.width * asset.height * 3;
+            }
+          }
+        } catch (e) {
+          console.error('[Media] Could not get file info:', e);
+        }
+
         setPendingFile({
           uri: asset.uri,
           name: fileName,
-          mimeType: asset.mimeType,
-          size: 0,
-          type: 'image'
+          mimeType: asset.mimeType || (asset.type === 'video' ? 'video/mp4' : 'image/jpeg'),
+          size: fileSize,
+          type: asset.type === 'video' ? 'file' : 'image'
         });
         Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
       }
-    } catch (err) {
-      console.warn(err);
+    } catch (err: any) {
+      console.error('[Media] Error picking media:', err);
+      if (err.message && err.message.includes('3164')) {
+        Alert.alert(
+          'Cannot Access Video',
+          'This video cannot be accessed. Try:\n\n1. Taking a new video with the camera\n2. Or using "File / Document" option instead'
+        );
+      } else {
+        Alert.alert('Error', err.message || 'Could not access the media.');
+      }
     }
   };
 

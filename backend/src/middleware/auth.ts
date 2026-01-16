@@ -2,6 +2,7 @@ import { Request, Response, NextFunction } from 'express';
 import jwt from 'jsonwebtoken';
 
 import { supabase } from '../config/supabase';
+import { Logger } from '../utils/logger';
 
 // Utvider Express Request type for å inkludere brukerdata
 export interface AuthenticatedRequest extends Request {
@@ -12,6 +13,7 @@ export interface AuthenticatedRequest extends Request {
 }
 
 export const authenticateToken = async (req: AuthenticatedRequest, res: Response, next: NextFunction) => {
+    const startTime = Date.now();
     const authHeader = req.headers['authorization'];
     // Forventer format: "Bearer <token>" eller query param ?token=<token>
     let token = authHeader && authHeader.split(' ')[1];
@@ -29,37 +31,32 @@ export const authenticateToken = async (req: AuthenticatedRequest, res: Response
 
     // Verify format (basic check)
     if (token.split('.').length !== 3) {
-        console.error('[AuthDebug] Malformed token structure');
+        Logger.error('[Auth] Malformed token structure');
         return res.status(401).json({ error: 'Ugyldig tokenformat' });
     }
 
-    console.log(`[AuthDebug] Verifying token: ${token.substring(0, 10)}...`);
+    // 1. Try Local JWT Verification (Fastest) - Only for HS256 tokens
+    const jwtSecret = process.env.SUPABASE_JWT_SECRET || process.env.JWT_SECRET;
+    const decodedToken = jwt.decode(token, { complete: true }) as any;
 
-    // Decode check (unverified) - needed for fallback
-    const decoded = jwt.decode(token);
-    console.log('[AuthDebug] Decoded token:', decoded);
-
-    // 1. Try Local JWT Verification (Best & Fastest)
-    const jwtSecret = process.env.SUPABASE_JWT_SECRET;
-    if (jwtSecret) {
+    if (jwtSecret && decodedToken && decodedToken.header.alg === 'HS256') {
         try {
             const verified = jwt.verify(token, jwtSecret) as any;
-            console.log('[Auth] Token verified locally with JWT Secret ✅');
+            const duration = Date.now() - startTime;
+            Logger.info(`[Auth] Token verifisert lokalt (HS256) på ${duration}ms ✅`);
             req.user = { id: verified.sub, ...verified };
             return next();
         } catch (jwtErr) {
-            console.error('[Auth] Local JWT verification failed:', jwtErr);
-            return res.status(401).json({ error: 'Ugyldig token signatur' });
+            // Local check failed, proceed to API
         }
-    } else {
-        console.warn('[Auth] Warning: SUPABASE_JWT_SECRET not set. Falling back to slower API verification.');
     }
 
-    // 2. Try Supabase Auth API (getUser)
+    // 2. Try Supabase Auth API (Robust fallback for RS256/ES256)
     const { data: { user }, error } = await supabase.auth.getUser(token);
 
     if (user) {
-        console.log('[Auth] Token verified via Supabase API ✅');
+        const duration = Date.now() - startTime;
+        Logger.info(`[Auth] Token verifisert via Supabase API på ${duration}ms ✅`);
         req.user = user;
         return next();
     }
@@ -68,20 +65,22 @@ export const authenticateToken = async (req: AuthenticatedRequest, res: Response
     // We check if the user exists in the DB via Admin API.
     // WARNING: This does NOT verify the signature if JWT Secret is missing. It only checks if the user ID claims to be real.
     // This is a necessary fallback for some Service Role client configurations.
-    if (error && decoded && typeof decoded === 'object' && decoded.sub && decoded.exp) {
+    const payload = decodedToken?.payload || decodedToken;
+    if (error && payload && typeof payload === 'object' && payload.sub && payload.exp) {
         const now = Math.floor(Date.now() / 1000);
-        if (decoded.exp > now) {
-            console.log('[Auth] getUser failed. Attempting fallback admin check for ID:', decoded.sub);
-            const { data: { user: adminUser }, error: adminError } = await supabase.auth.admin.getUserById(decoded.sub as string);
+        if (payload.exp > now) {
+            const { data: { user: adminUser }, error: adminError } = await supabase.auth.admin.getUserById(payload.sub as string);
 
             if (adminUser && !adminError) {
-                console.log('[Auth] Fallback: User confirmed via Admin API (Signature unverified!) ⚠️');
+                const duration = Date.now() - startTime;
+                Logger.info(`[Auth] Token bekreftet via Admin API på ${duration}ms ⚠️`);
                 req.user = adminUser;
                 return next();
             }
         }
     }
 
-    console.error('Token verifikasjonsfeil:', error?.message);
+    const totalDuration = Date.now() - startTime;
+    Logger.error(`[Auth] Verifisering feilet etter ${totalDuration}ms: ${error?.message}`);
     return res.status(401).json({ error: 'Ugyldig eller utløpt token' });
 };

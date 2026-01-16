@@ -1,5 +1,13 @@
 import dotenv from 'dotenv';
-dotenv.config();
+import path from 'path';
+import fs from 'fs';
+
+const envLocalPath = path.join(process.cwd(), '.env.local');
+if (fs.existsSync(envLocalPath)) {
+    dotenv.config({ path: envLocalPath });
+} else {
+    dotenv.config();
+}
 
 import http from 'http';
 import { Server } from 'socket.io';
@@ -8,6 +16,7 @@ import app from './index';
 import { socketService } from './services/socketService';
 import { cleanupService } from './services/cleanupService';
 import { supabase } from './config/supabase';
+import { Logger } from './utils/logger';
 
 // Les PORT fra .env eller bruk 3000
 const PORT = process.env.PORT || 3000;
@@ -49,7 +58,7 @@ io.use(async (socket, next) => {
 
     if (error || !user) {
         // Only log actual auth failures
-        console.error('[Socket] Auth Failed:', error?.message);
+        Logger.error('[Socket] Auth Failed:', error?.message);
         return next(new Error('Ugyldig eller utløpt token'));
     }
 
@@ -66,14 +75,14 @@ io.on('connection', (socket) => {
 
     // Brukeren blir med i et "rom" dedikert til sin bruker-id
     socket.join(`user:${userId}`);
-    console.log(`[Socket] Bruker ${userId} koblet til og ble med i rom user:${userId} ✅`);
+    Logger.info(`[Socket] Bruker ${userId} koblet til og ble med i rom user:${userId} ✅`);
 
     socket.on('disconnect', (reason) => {
-        console.log(`[Socket] Bruker ${userId} koblet fra. Årsak: ${reason}`);
+        Logger.info(`[Socket] Bruker ${userId} koblet fra. Årsak: ${reason}`);
     });
 });
 
 server.listen(PORT, () => {
-    console.log(`Server running on port ${PORT} with WebSocket enabled 🚀`);
+    Logger.info(`Server running on port ${PORT} with WebSocket enabled 🚀`);
     cleanupService.start();
 });

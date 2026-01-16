@@ -1,0 +1,21 @@
+# Dependencies
+node_modules/
+
+# Environment files
+.env
+.env.local
+.env.*.local
+
+# Build outputs
+dist/
+build/
+.expo/
+
+# OS files
+.DS_Store
+Thumbs.db
+
+# Project specific
+backend/uploads/
+web/dist/
+root/.expo/

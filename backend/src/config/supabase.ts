@@ -2,7 +2,15 @@ import { createClient } from '@supabase/supabase-js';
 import dotenv from 'dotenv';
 
 // Sørger for at environment variables er lastet inn
-dotenv.config();
+import path from 'path';
+import fs from 'fs';
+
+const envLocalPath = path.join(process.cwd(), '.env.local');
+if (fs.existsSync(envLocalPath)) {
+    dotenv.config({ path: envLocalPath });
+} else {
+    dotenv.config();
+}
 
 const supabaseUrl = process.env.SUPABASE_URL;
 const supabaseKey = process.env.SUPABASE_SERVICE_ROLE_KEY;
