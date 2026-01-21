@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useRef } from 'react';
-import { StyleSheet, View, TouchableOpacity, Alert, Image, ScrollView, Dimensions, Modal, Animated, PanResponder, Switch, TextInput, ActivityIndicator } from 'react-native';
+import { StyleSheet, View, TouchableOpacity, Alert, Image, ScrollView, Dimensions, Modal, Animated, PanResponder, Switch, TextInput, ActivityIndicator, Text } from 'react-native';
 import { useRouter } from 'expo-router';
 import * as Haptics from 'expo-haptics';
 import * as DocumentPicker from 'expo-document-picker';
@@ -10,6 +10,7 @@ import * as ImageManipulator from 'expo-image-manipulator';
 import { ThemedText } from '@/components/themed-text';
 import { IconSymbol } from '@/components/ui/icon-symbol';
 import { supabase } from '@/lib/supabase';
+import { useLanguage } from '@/lib/LanguageContext';
 
 const BACKEND_URL = process.env.EXPO_PUBLIC_BACKEND_URL || 'http://172.20.10.3:3000';
 const { width } = Dimensions.get('window');
@@ -25,6 +26,7 @@ type UploadItem = {
 
 export default function HomeScreen() {
   const router = useRouter();
+  const { language, setLanguage, t } = useLanguage();
   const [uploads, setUploads] = useState<UploadItem[]>([]);
   const [showSuccess, setShowSuccess] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
@@ -359,12 +361,12 @@ export default function HomeScreen() {
   const handleUploadPress = () => {
     Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
     Alert.alert(
-      'Upload',
-      'Choose upload type',
+      t.upload.chooseType,
+      '',
       [
-        { text: 'Photo / Video', onPress: handlePickMedia },
-        { text: 'File / Document', onPress: handlePickDocument },
-        { text: 'Cancel', style: 'cancel' },
+        { text: t.upload.photoVideo, onPress: handlePickMedia },
+        { text: t.upload.fileDocument, onPress: handlePickDocument },
+        { text: t.upload.cancel, style: 'cancel' },
       ]
     );
   };
@@ -392,10 +394,10 @@ export default function HomeScreen() {
         <View style={styles.uploadMetaRow}>
           <ThemedText style={styles.uploadSize}>
             {item.size ? formatSize(item.size) : 'Unknown size'}
-            {item.status === 'uploading' && ' • Sender... '}
+            {item.status === 'uploading' && ` • ${t.home.sending} `}
             {item.status === 'uploading' && <ActivityIndicator size="small" color="#8E8E93" />}
-            {item.status === 'completed' && ' • Sendt! 🚀'}
-            {item.status === 'error' && ' • Feilet'}
+            {item.status === 'completed' && ` • ${t.home.sent}`}
+            {item.status === 'error' && ` • ${t.home.failed}`}
           </ThemedText>
         </View>
         <View style={styles.progressBarBg}>
@@ -464,23 +466,23 @@ export default function HomeScreen() {
                   resizeMode="contain"
                 />
               </View>
-              <ThemedText style={styles.uploadTitle}>Upload file or an image</ThemedText>
-              <ThemedText style={styles.uploadSubtitle}>Maximum file size: 10MB</ThemedText>
+              <ThemedText style={styles.uploadTitle}>{t.home.uploadTitle}</ThemedText>
+              <ThemedText style={styles.uploadSubtitle}>{t.home.uploadSubtitle}</ThemedText>
             </>
           )}
         </TouchableOpacity>
 
         {/* Uploads List Header */}
         <View style={styles.uploadsHeader}>
-          <ThemedText style={styles.sectionTitle}>Uploads</ThemedText>
+          <ThemedText style={styles.sectionTitle}>{t.home.uploadsSection}</ThemedText>
         </View>
 
         {/* Uploads List */}
         <View style={styles.uploadsList}>
           {uploads.length === 0 ? (
             <View style={styles.emptyState}>
-              <ThemedText style={styles.emptyStateText}>Ingen aktive opplastinger</ThemedText>
-              <ThemedText style={styles.emptyStateSubtext}>Last opp en fil for å komme i gang</ThemedText>
+              <ThemedText style={styles.emptyStateText}>{t.home.noUploads}</ThemedText>
+              <ThemedText style={styles.emptyStateSubtext}>{t.home.noUploadsHint}</ThemedText>
             </View>
           ) : (
             uploads.map(item => (
@@ -506,30 +508,62 @@ export default function HomeScreen() {
           </View>
 
           <View style={styles.modalContent}>
-            <ThemedText style={styles.modalTitle}>Settings</ThemedText>
-            <ThemedText style={styles.modalSubtitle}>Manage your account and preferences</ThemedText>
+            <ThemedText style={styles.modalTitle}>{t.settings.title}</ThemedText>
+            <ThemedText style={styles.modalSubtitle}>{t.settings.subtitle}</ThemedText>
 
             <View style={styles.settingsSection}>
-              <ThemedText style={styles.sectionLabel}>Account</ThemedText>
+              <ThemedText style={styles.sectionLabel}>{t.settings.account}</ThemedText>
               <View style={styles.accountCard}>
                 <View style={styles.avatarPlaceholder}>
                   <ThemedText style={styles.avatarText}>U</ThemedText>
                 </View>
                 <View>
-                  <ThemedText style={styles.accountEmail}>User Account</ThemedText>
-                  <ThemedText style={styles.accountStatus}>Pro Member</ThemedText>
+                  <ThemedText style={styles.accountEmail}>{t.settings.userAccount}</ThemedText>
+                  <ThemedText style={styles.accountStatus}>{t.settings.proMember}</ThemedText>
                 </View>
               </View>
             </View>
 
             <View style={styles.settingsSection}>
-              <ThemedText style={styles.sectionLabel}>Application</ThemedText>
+              <ThemedText style={styles.sectionLabel}>{t.settings.application}</ThemedText>
+
+              {/* Language Selector with Flags */}
+              <View style={styles.settingsRow}>
+                <ThemedText style={styles.settingsRowText}>{t.settings.language}</ThemedText>
+                <View style={styles.flagContainer}>
+                  <TouchableOpacity
+                    onPress={() => {
+                      Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+                      setLanguage('no');
+                    }}
+                    style={[
+                      styles.flagButton,
+                      language === 'no' && styles.flagButtonActive
+                    ]}
+                  >
+                    <Text style={styles.flagEmoji}>🇳🇴</Text>
+                  </TouchableOpacity>
+                  <TouchableOpacity
+                    onPress={() => {
+                      Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+                      setLanguage('en');
+                    }}
+                    style={[
+                      styles.flagButton,
+                      language === 'en' && styles.flagButtonActive
+                    ]}
+                  >
+                    <Text style={styles.flagEmoji}>🇺🇸</Text>
+                  </TouchableOpacity>
+                </View>
+              </View>
+
               <TouchableOpacity style={styles.settingsRow}>
-                <ThemedText style={styles.settingsRowText}>Notifications</ThemedText>
+                <ThemedText style={styles.settingsRowText}>{t.settings.notifications}</ThemedText>
                 <IconSymbol name="chevron.right" size={16} color="#C7C7CC" />
               </TouchableOpacity>
               <TouchableOpacity style={styles.settingsRow}>
-                <ThemedText style={styles.settingsRowText}>Privacy Policy</ThemedText>
+                <ThemedText style={styles.settingsRowText}>{t.settings.privacyPolicy}</ThemedText>
                 <IconSymbol name="chevron.right" size={16} color="#C7C7CC" />
               </TouchableOpacity>
             </View>
@@ -587,12 +621,12 @@ export default function HomeScreen() {
                   {showOverlay && (
                     <View style={styles.textOverlayContainer}>
                       <View style={styles.textOverlayRow}>
-                        <ThemedText style={styles.textOverlayTitle}>{overlayTitle || 'Title'}</ThemedText>
+                        <ThemedText style={styles.textOverlayTitle}>{overlayTitle || t.upload.title}</ThemedText>
                         <ThemedText style={styles.textOverlayDate}>
-                          {new Date().toLocaleDateString('en-US', { month: 'short', day: 'numeric' })}
+                          {new Date().toLocaleDateString(language === 'no' ? 'nb-NO' : 'en-US', { month: 'short', day: 'numeric' })}
                         </ThemedText>
                       </View>
-                      <ThemedText style={styles.textOverlayDesc}>{overlayDesc || 'Description'}</ThemedText>
+                      <ThemedText style={styles.textOverlayDesc}>{overlayDesc || t.upload.description}</ThemedText>
                     </View>
                   )}
                 </>
@@ -605,14 +639,14 @@ export default function HomeScreen() {
 
               <View style={styles.swipeHintOverlay}>
                 <IconSymbol name="chevron.up" size={32} color="#FFFFFF" />
-                <ThemedText style={styles.swipeTextOverlay}>Swipe up to send</ThemedText>
+                <ThemedText style={styles.swipeTextOverlay}>{t.upload.swipeToSend}</ThemedText>
               </View>
             </Animated.View>
 
             {/* Text Overlay Controls */}
             <View style={styles.overlayControls}>
               <View style={styles.switchRow}>
-                <ThemedText style={styles.switchLabel}>Add Text Overlay</ThemedText>
+                <ThemedText style={styles.switchLabel}>{t.upload.addTextOverlay}</ThemedText>
                 <Switch
                   value={showOverlay}
                   onValueChange={(val) => {
@@ -628,14 +662,14 @@ export default function HomeScreen() {
                 <View style={styles.inputContainer}>
                   <TextInput
                     style={styles.overlayInput}
-                    placeholder="Title"
+                    placeholder={t.upload.title}
                     placeholderTextColor="#999"
                     value={overlayTitle}
                     onChangeText={setOverlayTitle}
                   />
                   <TextInput
                     style={styles.overlayInput}
-                    placeholder="Description"
+                    placeholder={t.upload.description}
                     placeholderTextColor="#999"
                     value={overlayDesc}
                     onChangeText={setOverlayDesc}
@@ -655,12 +689,12 @@ export default function HomeScreen() {
       >
         <SafeAreaView style={styles.paywallContainer}>
           <View style={styles.paywallContent}>
-            <ThemedText style={styles.paywallTag}>EXCLUSIVE ACCESS</ThemedText>
-            <ThemedText style={styles.paywallTitle}>Trial Period</ThemedText>
+            <ThemedText style={styles.paywallTag}>{t.paywall.exclusiveAccess}</ThemedText>
+            <ThemedText style={styles.paywallTitle}>{t.paywall.trialPeriod}</ThemedText>
 
             <View style={styles.countdownContainer}>
               <ThemedText style={styles.countdownNumber}>{daysLeft}</ThemedText>
-              <ThemedText style={styles.countdownLabel}>DAYS LEFT</ThemedText>
+              <ThemedText style={styles.countdownLabel}>{t.paywall.daysLeft}</ThemedText>
             </View>
 
             <View style={styles.featureList}>
@@ -669,8 +703,8 @@ export default function HomeScreen() {
                   <IconSymbol name="paperplane.fill" size={20} color="#000000" />
                 </View>
                 <View>
-                  <ThemedText style={styles.featureTitle}>Instant Transfers</ThemedText>
-                  <ThemedText style={styles.featureDesc}>High-velocity file sharing across all devices.</ThemedText>
+                  <ThemedText style={styles.featureTitle}>{t.paywall.instantTransfers}</ThemedText>
+                  <ThemedText style={styles.featureDesc}>{t.paywall.instantTransfersDesc}</ThemedText>
                 </View>
               </View>
 
@@ -679,8 +713,8 @@ export default function HomeScreen() {
                   <IconSymbol name="checkmark.circle.fill" size={20} color="#000000" />
                 </View>
                 <View>
-                  <ThemedText style={styles.featureTitle}>Secure Encryption</ThemedText>
-                  <ThemedText style={styles.featureDesc}>Your files are protected with end-to-end security.</ThemedText>
+                  <ThemedText style={styles.featureTitle}>{t.paywall.secureEncryption}</ThemedText>
+                  <ThemedText style={styles.featureDesc}>{t.paywall.secureEncryptionDesc}</ThemedText>
                 </View>
               </View>
 
@@ -693,7 +727,7 @@ export default function HomeScreen() {
               style={styles.upgradeButton}
               onPress={() => Alert.alert('Upgrade coming soon!', 'Thank you for your interest in FlashFiles Pro.')}
             >
-              <ThemedText style={styles.upgradeButtonText}>Unlock Full Version</ThemedText>
+              <ThemedText style={styles.upgradeButtonText}>{t.paywall.unlockFull}</ThemedText>
             </TouchableOpacity>
 
             <TouchableOpacity
@@ -703,7 +737,7 @@ export default function HomeScreen() {
                 setPaywallVisible(false);
               }}
             >
-              <ThemedText style={styles.skipButtonText}>Continue to App</ThemedText>
+              <ThemedText style={styles.skipButtonText}>{t.paywall.continueToApp}</ThemedText>
             </TouchableOpacity>
           </View>
         </SafeAreaView>
@@ -715,7 +749,7 @@ export default function HomeScreen() {
           <View style={styles.loadingOverlay}>
             <View style={styles.loadingContainer}>
               <ActivityIndicator size="large" color="#007AFF" />
-              <ThemedText style={styles.loadingText}>Klargjør fil...</ThemedText>
+              <ThemedText style={styles.loadingText}>{t.home.preparing}</ThemedText>
             </View>
           </View>
         )
@@ -947,6 +981,27 @@ const styles = StyleSheet.create({
     fontSize: 17,
     fontWeight: '500',
     color: '#000000',
+  },
+  flagContainer: {
+    flexDirection: 'row',
+    gap: 8,
+  },
+  flagButton: {
+    width: 44,
+    height: 32,
+    borderRadius: 8,
+    backgroundColor: '#F2F2F7',
+    alignItems: 'center',
+    justifyContent: 'center',
+    borderWidth: 2,
+    borderColor: 'transparent',
+  },
+  flagButtonActive: {
+    borderColor: '#007AFF',
+    backgroundColor: '#E3F2FD',
+  },
+  flagEmoji: {
+    fontSize: 20,
   },
   modalFooter: {
     paddingHorizontal: 30,

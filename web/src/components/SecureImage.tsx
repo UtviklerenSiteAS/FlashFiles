@@ -7,16 +7,27 @@ interface SecureImageProps {
     filename: string;
     backendUrl: string;
     children?: React.ReactNode;
+    className?: string;
+    style?: React.CSSProperties;
+    imgClassName?: string;
 }
 
-export const SecureImage: React.FC<SecureImageProps> = ({ fileId, filename, backendUrl, children }) => {
+export const SecureImage: React.FC<SecureImageProps> = ({
+    fileId,
+    filename,
+    backendUrl,
+    children,
+    className = '',
+    style = {},
+    imgClassName = ''
+}) => {
     const [imageUrl, setImageUrl] = useState<string | null>(null);
     const [loading, setLoading] = useState(false);
     const [error, setError] = useState(false);
 
     const isImage = (name: string) => {
         const ext = name.split('.').pop()?.toLowerCase();
-        return ['jpg', 'jpeg', 'png', 'gif', 'webp', 'svg'].includes(ext || '');
+        return ['jpg', 'jpeg', 'png', 'gif', 'webp', 'svg', 'heic', 'heif'].includes(ext || '');
     };
 
     useEffect(() => {
@@ -61,30 +72,25 @@ export const SecureImage: React.FC<SecureImageProps> = ({ fileId, filename, back
         };
     }, [fileId, filename, backendUrl]);
 
-    const containerStyle: React.CSSProperties = {
-        width: '100%',
-        backgroundColor: '#F5F5F7',
-        borderRadius: '32px',
-        overflow: 'hidden',
-        position: 'relative',
-        display: 'flex',
-        flexDirection: 'column'
-    };
+    // Base container style - relative to allow children to be absolute if they want, 
+    // but default is to just be a container.
+    const containerClasses = `relative overflow-hidden flex flex-col ${className}`;
 
     if (!isImage(filename)) {
         return (
-            <div style={{ ...containerStyle, aspectRatio: '4/5', justifyContent: 'center', alignItems: 'center' }}>
-                <FileText size={64} className="text-[#007AFF]" strokeWidth={1} />
-                <div style={{ position: 'absolute', bottom: 0, left: 0, right: 0, padding: '24px', background: 'linear-gradient(transparent, rgba(0,0,0,0.4))' }}>
-                    {children}
+            <div className={`${containerClasses} bg-gray-50 border border-gray-100 items-center justify-center`} style={style}>
+                <div className="flex flex-col items-center justify-center p-8 text-gray-400">
+                    <FileText size={48} strokeWidth={1.5} />
+                    <span className="mt-2 text-xs font-medium uppercase tracking-wider opacity-70">Document</span>
                 </div>
+                {children}
             </div>
         );
     }
 
     if (loading) {
         return (
-            <div style={{ ...containerStyle, aspectRatio: '4/5', justifyContent: 'center', alignItems: 'center' }}>
+            <div className={`${containerClasses} bg-gray-50 items-center justify-center`} style={style}>
                 <Loader2 className="animate-spin text-gray-300" size={32} />
             </div>
         );
@@ -92,44 +98,21 @@ export const SecureImage: React.FC<SecureImageProps> = ({ fileId, filename, back
 
     if (error || !imageUrl) {
         return (
-            <div style={{ ...containerStyle, aspectRatio: '4/5', justifyContent: 'center', alignItems: 'center' }}>
-                <FileText size={64} className="text-gray-300" strokeWidth={1} />
-                <div style={{ position: 'absolute', bottom: 0, left: 0, right: 0, padding: '24px', background: 'linear-gradient(transparent, rgba(0,0,0,0.6))' }}>
-                    {children}
-                </div>
+            <div className={`${containerClasses} bg-gray-50 items-center justify-center`} style={style}>
+                <FileText size={48} className="text-gray-300" strokeWidth={1} />
+                {children}
             </div>
         );
     }
 
     return (
-        <div style={containerStyle}>
+        <div className={containerClasses} style={style}>
             <img
                 src={imageUrl}
                 alt={filename}
-                style={{
-                    width: '100%',
-                    height: 'auto',
-                    display: 'block'
-                }}
+                className={`w-full h-full object-cover block transition-transform duration-500 will-change-transform ${imgClassName}`}
             />
-            {/* Minimal Overly Canvas */}
-            <div
-                style={{
-                    position: 'absolute',
-                    top: 0,
-                    left: 0,
-                    right: 0,
-                    bottom: 0,
-                    padding: '16px',
-                    color: 'white',
-                    display: 'flex',
-                    flexDirection: 'column',
-                    justifyContent: 'flex-end',
-                    background: 'linear-gradient(to top, rgba(0,0,0,0.4) 0%, transparent 60%)'
-                }}
-            >
-                {children}
-            </div>
+            {children}
         </div>
     );
 };

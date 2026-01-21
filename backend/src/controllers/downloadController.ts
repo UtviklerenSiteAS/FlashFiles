@@ -3,6 +3,7 @@ import path from 'path';
 import fs from 'fs';
 import { AuthenticatedRequest } from '../middleware/auth';
 import { supabase } from '../config/supabase';
+import convert from 'heic-convert';
 
 export const downloadFile = async (req: AuthenticatedRequest, res: Response) => {
     try {
@@ -44,8 +45,29 @@ export const downloadFile = async (req: AuthenticatedRequest, res: Response) => 
             return res.status(404).json({ error: 'Filen mangler på serveren' });
         }
 
-        // 5. Stream filen til klienten
-        // res.download setter automatisk Content-Disposition headeren med det originale filnavnet
+        // 5. Check if file is HEIC and convert for web preview
+        const ext = fileData.filename.split('.').pop()?.toLowerCase();
+        if (ext === 'heic' || ext === 'heif') {
+            try {
+                console.log(`[HEIC] Converting ${fileData.filename} to JPEG for preview...`);
+                const inputBuffer = fs.readFileSync(filePath);
+                const outputBuffer = await convert({
+                    buffer: inputBuffer,
+                    format: 'JPEG',
+                    quality: 0.9
+                });
+
+                // Send converted JPEG
+                res.set('Content-Type', 'image/jpeg');
+                res.set('Content-Disposition', `inline; filename="${fileData.filename.replace(/\.heic$/i, '.jpg').replace(/\.heif$/i, '.jpg')}"`);
+                return res.send(Buffer.from(outputBuffer));
+            } catch (conversionError) {
+                console.error('[HEIC] Conversion failed, sending original file:', conversionError);
+                // Fall back to sending original file if conversion fails
+            }
+        }
+
+        // 6. Stream filen til klienten (for non-HEIC or failed conversion)
         res.download(filePath, fileData.filename, (err) => {
             if (err) {
                 console.error('Feil under streaming av fil:', err);

@@ -31,6 +31,30 @@ Always follow these design principles when modifying or creating new screens for
 - **Padding**: Use standard horizontal padding of `30px`. Use vertical padding (e.g., `80px` top, `100px` bottom) to create a spacious, breathable feel.
 
 ## User Experience
+
+## Popup & Modal Cards
+When creating popup cards, notifications, or modals, follow this premium style pattern:
+
+- **Positioning**: Use `position: fixed` with generous margins from screen edges (`48px` minimum).
+- **Sizing**: Fixed width (`320px-360px`) with `maxWidth: calc(100vw - 96px)` for responsiveness.
+- **Container Style**:
+    - Background: Pure white (`#FFFFFF`) or semi-transparent (`rgba(255,255,255,0.95)` with backdrop blur).
+    - Border radius: Large, soft corners (`24px-32px`).
+    - Shadow: Deep, layered shadow for "floating" effect: `0 25px 50px -12px rgba(0, 0, 0, 0.25), 0 0 0 1px rgba(0, 0, 0, 0.05)`.
+    - Overflow: `hidden` to clip content to rounded corners.
+- **Internal Layout**:
+    - Padding: `12px` around image/preview areas, `20px` for text/action areas.
+    - Image containers: `border-radius: 24px`, `aspect-ratio: 1/1`, `background: #f5f5f5`.
+- **Buttons**:
+    - Primary (Accept): `background: #007AFF`, white text, `border-radius: 16px`, `padding: 14px 0`, with blue glow shadow (`0 8px 20px rgba(0, 122, 255, 0.35)`).
+    - Secondary (Decline): `background: #f3f4f6`, dark gray text (`#374151`), `border-radius: 16px`.
+    - Use `display: flex` with `gap: 12px` for button rows.
+- **Animation**: Use spring animations for entry/exit (`type: 'spring', damping: 25, stiffness: 300`). Entry from bottom with scale (`y: 60, scale: 0.95` → `y: 0, scale: 1`).
+- **Typography**:
+    - Title: `fontWeight: 700`, `fontSize: 18px`, `color: #111`.
+    - Subtitle/filename: `fontSize: 14px`, `color: #888`, with `text-overflow: ellipsis`.
+- **IMPORTANT**: Always use **inline styles** for popup components to ensure reliable rendering across all environments.
+
 ## Backend & Environment
 - **Provider**: Supabase.
 - **Environment Variables**:

@@ -30,6 +30,12 @@ export default function LoginPage() {
             });
 
             if (error) {
+                console.error('--- Login Error Debug ---');
+                console.error('Error Code:', error.code);
+                console.error('Error Status:', error.status);
+                console.error('Error Message:', error.message);
+                console.error('Full Error:', JSON.stringify(error, null, 2));
+                console.error('--------------------------');
                 Haptics.notificationAsync(Haptics.NotificationFeedbackType.Error);
                 Alert.alert('Login Failed', error.message);
             } else {

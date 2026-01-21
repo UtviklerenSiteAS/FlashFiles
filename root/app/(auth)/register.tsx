@@ -34,6 +34,12 @@ export default function RegisterPage() {
             });
 
             if (error) {
+                console.error('--- Register Error Debug ---');
+                console.error('Error Code:', error.code);
+                console.error('Error Status:', error.status);
+                console.error('Error Message:', error.message);
+                console.error('Full Error:', JSON.stringify(error, null, 2));
+                console.error('--------------------------');
                 Haptics.notificationAsync(Haptics.NotificationFeedbackType.Error);
                 Alert.alert('Registration Failed', error.message);
             } else {

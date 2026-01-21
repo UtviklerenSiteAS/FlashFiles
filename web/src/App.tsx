@@ -4,6 +4,7 @@ import { Login } from './pages/Login'
 import { Register } from './pages/Register'
 import { Dashboard } from './pages/Dashboard'
 import { supabase } from './lib/supabase'
+import { LanguageProvider } from './lib/LanguageContext'
 
 function App() {
   const [session, setSession] = useState<any>(null)
@@ -23,22 +24,20 @@ function App() {
     return () => subscription.unsubscribe()
   }, [])
 
-  if (session) {
-    return <Dashboard />
-  }
-
-  if (view === 'login') {
-    return <Login onBack={() => setView('landing')} onSuccess={() => setView('landing')} onGoToRegister={() => setView('register')} />
-  }
-
-  if (view === 'register') {
-    return <Register onBack={() => setView('landing')} onSuccess={() => setView('landing')} />
-  }
-
   return (
-    <div className="w-full h-full">
-      <LandingPage onLogin={() => setView('login')} onRegister={() => setView('register')} />
-    </div>
+    <LanguageProvider>
+      {session ? (
+        <Dashboard />
+      ) : view === 'login' ? (
+        <Login onBack={() => setView('landing')} onSuccess={() => setView('landing')} onGoToRegister={() => setView('register')} />
+      ) : view === 'register' ? (
+        <Register onBack={() => setView('landing')} onSuccess={() => setView('landing')} />
+      ) : (
+        <div className="w-full h-full">
+          <LandingPage onLogin={() => setView('login')} onRegister={() => setView('register')} />
+        </div>
+      )}
+    </LanguageProvider>
   )
 }
 
